@@ -168,8 +168,8 @@ def _remove_dc(data: np.ndarray) -> np.ndarray:
 
 def to_amplitude_phase(csi_window: np.ndarray) -> np.ndarray:
     """
-    Applies the remaining time-domain filtering pipeline (Hampel, Lowpass, 
-    DC Removal, IQR Normalization) independently to Amplitude and Phase.
+    Applies the remaining time-domain filtering pipeline (Hampel, Lowpass,
+    optional DC Removal) independently to Amplitude and Phase.
     """
     amp = np.abs(csi_window)
     # Unwrap phase smoothly across time now that it has been aligned to a uniform grid
@@ -183,9 +183,18 @@ def to_amplitude_phase(csi_window: np.ndarray) -> np.ndarray:
     amp = _lowpass_filter(amp, config.LPF_CUTOFF_HZ, config.LPF_FS_HZ, config.LPF_ORDER)
     phase = _lowpass_filter(phase, config.LPF_CUTOFF_HZ, config.LPF_FS_HZ, config.LPF_ORDER)
 
-    # 3. DC Removal
-    amp = _remove_dc(amp)
-    phase = _remove_dc(phase)
+    # 3. DC Removal (optional — see config.ENABLE_DC_REMOVAL). DC removal
+    # subtracts each trial's own temporal mean, which discards exactly the
+    # static path-loss/attenuation level a static weight-regression task
+    # is plausibly most dependent on (as opposed to motion-sensing tasks,
+    # where the DC term is nuisance and the AC/time-varying component is
+    # the signal). An ablation study found disabling it improved CSI-only
+    # test MAE substantially (~470g -> ~260g on that run) — default is
+    # left True here to preserve prior pipeline behavior, but this is a
+    # strong candidate to try disabled.
+    if config.ENABLE_DC_REMOVAL:
+        amp = _remove_dc(amp)
+        phase = _remove_dc(phase)
 
     return np.stack([amp, phase], axis=-1).astype(np.float32)
 

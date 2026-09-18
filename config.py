@@ -11,16 +11,16 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Input paths — EDIT THESE
 # ---------------------------------------------------------------------------
-LEDGER_PATH = Path(r"D:\esp-idf\collected_data\ground_truth_ledger_1.csv")
+LEDGER_PATH = Path(r"D:\esp-idf\collected_data\dataset\ground_truth_ledger.csv")
 
 # The 3 CSI csv files (headerless, ESP32 CSI-Tool style rows)
 CSI_FILES = [
-    Path(r"D:\esp-idf\collected_data\active_ap_data.csv"),
-    Path(r"D:\esp-idf\collected_data\passive1_data.csv"),
-    Path(r"D:\esp-idf\collected_data\passive2_data.csv"),
+    Path(r"D:\esp-idf\collected_data\dataset\active_ap_data.csv"),
+    Path(r"D:\esp-idf\collected_data\dataset\passive1_data.csv"),
+    Path(r"D:\esp-idf\collected_data\dataset\passive2_data.csv"),
 ]
 
-VIDEO_ROOT = Path(r"D:\esp-idf\collected_data")          # contains camera1_data/ and camera2_data/
+VIDEO_ROOT = Path(r"D:\esp-idf\collected_data\dataset")          # contains camera1_data/ and camera2_data/
 CAMERA_DIRS = ["camera1_data", "camera2_data"]
 VIDEO_EXTENSIONS = [".mp4", ".MOV", ".mov", ".MP4"]
 
@@ -65,6 +65,19 @@ HAMPEL_SIGMA = 3.0          # Number of Median Absolute Deviations (MAD) for thr
 LPF_CUTOFF_HZ = 5.0         # Cutoff frequency in Hz
 LPF_FS_HZ = 100.0           # Assumed uniform sampling rate after resampling
 LPF_ORDER = 3               # Butterworth filter order
+
+# DC Removal (subtracts each trial's own temporal mean from amplitude/phase)
+# Standard for motion/activity-sensing CSI tasks, where the static path-loss
+# level is nuisance and the time-varying component is the signal. For a
+# STATIC weight-regression task, the opposite may hold: the static
+# path-loss/attenuation level is a plausible carrier of the weight signal,
+# and per-trial DC removal deletes it before the model ever sees it (no
+# amount of downstream z-scoring can recover it, since z-scoring recenters
+# across trials, not within one). An ablation study found disabling this
+# improved CSI-only test MAE substantially on that run (~470g -> ~260g) —
+# worth testing on the real pipeline, hence this flag defaults to keep
+# prior behavior (True) rather than silently changing it.
+ENABLE_DC_REMOVAL = False
 
 # ---------------------------------------------------------------------------
 # Video parsing
